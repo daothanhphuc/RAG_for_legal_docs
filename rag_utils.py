@@ -1,0 +1,122 @@
+import os
+import numpy as np
+from sentence_transformers import SentenceTransformer
+from sentence_transformers import CrossEncoder
+from pymilvus import connections, Collection
+import openai
+from typing import List, Dict
+from dataclasses import dataclass
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
+
+connections.connect(alias="default", uri=os.getenv("MILVUS_URI"), 
+                    token=os.getenv("MILVUS_TOKEN"), 
+                    secure=True
+)
+collection = Collection(name="document_chunks", using="default")
+collection.load()
+
+embedder = SentenceTransformer("all-MiniLM-L6-v2")
+cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')  # pretrained reranker
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+INITIAL_K = 10
+RERANK_TOP_K = 5
+@dataclass
+class RetrievedChunk:
+    score_initial: float
+    score_rerank: float
+    chunk_text: str
+    metadata: Dict
+
+def normalize(vec: np.ndarray) -> List[float]:
+    norm = np.linalg.norm(vec)
+    return (vec / norm).tolist() if norm != 0 else vec.tolist()
+
+def initial_retrieval(query: str, k: int = INITIAL_K) -> List[RetrievedChunk]:
+    q_vec = embedder.encode(query)
+    q_vec = normalize(q_vec)
+    results = collection.search(
+        data=[q_vec],
+        anns_field="embedding",
+        param={"metric_type": "COSINE", "params": {"ef": 50}},
+        limit=k,
+        output_fields=[
+            "document_id",
+            "chunk_index",
+            "so_ky_hieu",
+            "trich_yeu",
+            "file_link_local",
+            "chunk_text",
+        ],
+    )
+    hits = results[0]
+    chunks = []
+    for hit in hits:
+        md = hit.entity
+        metadata = {
+            "document_id": md.get("document_id"),
+            "chunk_index": md.get("chunk_index"),
+            "so_ky_hieu": md.get("so_ky_hieu"),
+            "trich_yeu": md.get("trich_yeu"),
+            "file_link_local": md.get("file_link_local"),
+        }
+        chunks.append(RetrievedChunk(
+            score_initial=hit.score,
+            score_rerank=0.0,  # placeholder
+            chunk_text=md.get("chunk_text", ""),
+            metadata=metadata
+        ))
+    return chunks
+
+def rerank(query: str, candidates: List[RetrievedChunk], top_k: int = RERANK_TOP_K) -> List[RetrievedChunk]:
+    if not candidates:
+        return []
+
+    pairs = [[query, c.chunk_text] for c in candidates]
+    rerank_scores = cross_encoder.predict(pairs)  # higher is better
+    for c, s in zip(candidates, rerank_scores):
+        c.score_rerank = float(s)
+    # sort by rerank then maybe fallback to initial if tie
+    sorted_chunks = sorted(candidates, key=lambda x: x.score_rerank, reverse=True)
+    return sorted_chunks[:top_k]
+
+def build_prompt(question: str, chunks: List[RetrievedChunk]) -> str:
+    parts = []
+    for i, c in enumerate(chunks, 1):
+        meta = c.metadata
+        part = (
+            f"[{i}] score_initial: {c.score_initial:.4f}, rerank_score: {c.score_rerank:.4f}\n"
+            f"so_ky_hieu: {meta.get('so_ky_hieu','')}; trich_yeu: {meta.get('trich_yeu','')}; "
+            f"file: {meta.get('file_link_local','')}; chunk_index: {meta.get('chunk_index')}\n"
+            # f"Text: {c.chunk_text.strip()[:100]}\n"
+        )
+        parts.append(part)
+    context = "\n---\n".join(parts)
+    prompt = f"""
+Bạn là một trợ lý pháp lý. Sử dụng các đoạn văn bản đã truy xuất (cùng với điểm số và siêu dữ liệu của chúng) để trả lời câu hỏi của người dùng. 
+Trích dẫn nguồn bằng so_ky_hieu và chunk_index trong câu trả lời của bạn.
+Context:
+{context}
+
+Question: {question}
+
+Trả lời của bạn nên ngắn gọn và trực tiếp, chỉ sử dụng thông tin từ các đoạn văn bản đã cung cấp.
+Trích dẫn đầy đủ nội dung từ đoạn văn bản được cung cấp nếu người dùng yêu cầu. 
+"""
+    return prompt
+#Trả lời : "Tôi không biết dựa trên các tài liệu đã cung cấp." nếu không có thông tin nào liên quan.
+
+client = OpenAI(api_key=OPENAI_API_KEY)
+def ask_llm(prompt: str) -> str:
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "Bạn là một người trợ lý chuyên tìm kiếm và trả lời về thông tin văn bản hành chính."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=800
+    )
+    return response.choices[0].message.content.strip()
