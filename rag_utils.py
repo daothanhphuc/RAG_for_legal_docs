@@ -97,14 +97,13 @@ def build_prompt(question: str, chunks: List[RetrievedChunk]) -> str:
     context = "\n---\n".join(parts)
     prompt = f"""
 Bạn là một trợ lý pháp lý. Sử dụng các đoạn văn bản đã truy xuất (cùng với điểm số và siêu dữ liệu của chúng) để trả lời câu hỏi của người dùng. 
-Trích dẫn nguồn bằng so_ky_hieu và chunk_index trong câu trả lời của bạn.
+Trích dẫn nguồn đầy đủ nội dung từ đoạn văn bản được cung cấp.
 Context:
 {context}
 
 Question: {question}
 
 Trả lời của bạn nên ngắn gọn và trực tiếp, chỉ sử dụng thông tin từ các đoạn văn bản đã cung cấp.
-Trích dẫn đầy đủ nội dung từ đoạn văn bản được cung cấp nếu người dùng yêu cầu. 
 """
     return prompt
 #Trả lời : "Tôi không biết dựa trên các tài liệu đã cung cấp." nếu không có thông tin nào liên quan.
