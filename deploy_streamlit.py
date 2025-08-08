@@ -42,15 +42,15 @@ if query:
         reranked = rerank(query, initial, top_k=RERANK_TOP_K)
 
     # Show retrieved and scores
-    st.subheader("Retrieved & Reranked Chunks")
-    for i, chunk in enumerate(reranked, 1):
-        meta = chunk.metadata
-        st.markdown(f"**[{i}] so_ky_hieu:** {meta.get('so_ky_hieu','')}  "
-                    f"**chunk_index:** {meta.get('chunk_index')}  "
-                    f"**init_score:** {chunk.score_initial:.4f}  "
-                    f"**rerank_score:** {chunk.score_rerank:.4f}")
-        st.markdown(f"> {chunk.chunk_text.strip()[:1000]}...")
-        st.caption(f"trich_yeu: {meta.get('trich_yeu','')}  ")
+    # st.subheader("Retrieved & Reranked Chunks")
+    # for i, chunk in enumerate(reranked, 1):
+    #     meta = chunk.metadata
+    #     st.markdown(f"**[{i}] so_ky_hieu:** {meta.get('so_ky_hieu','')}  "
+    #                 f"**chunk_index:** {meta.get('chunk_index')}  "
+    #                 f"**init_score:** {chunk.score_initial:.4f}  "
+    #                 f"**rerank_score:** {chunk.score_rerank:.4f}")
+    #     st.markdown(f"> {chunk.chunk_text.strip()[:1000]}...")
+    #     st.caption(f"trich_yeu: {meta.get('trich_yeu','')}  ")
 
     # Build prompt and call LLM
     prompt = build_prompt(query, reranked)
