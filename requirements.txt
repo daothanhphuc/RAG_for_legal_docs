@@ -1,0 +1,10 @@
+streamlit
+sentence-transformers
+openai
+pymilvus
+psycopg2-binary
+python-dotenv
+huggingface_hub
+pandas
+numpy
+tqdm
