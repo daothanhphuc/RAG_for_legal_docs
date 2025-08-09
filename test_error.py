@@ -118,7 +118,7 @@ if not_found:
 # # print("First 2 files in all_md:", all_md[:2])
 
 # if START_FILE not in all_md:
-#     print(f"⚠️ File '{START_FILE}' not found in {TARGET_FOLDER}")
+#     print(f"File '{START_FILE}' not found in {TARGET_FOLDER}")
 # else:
 #     start_idx = all_md.index(START_FILE)
 #     # include the start file and all after
@@ -128,4 +128,4 @@ if not_found:
 #         for name in files_after:
 #             f.write(name + "\n")
 
-#     print(f"✅ {len(files_after)} filenames (starting from '{START_FILE}') written to {OUTPUT_FILE.resolve()}")
+#     print(f"{len(files_after)} filenames (starting from '{START_FILE}') written to {OUTPUT_FILE.resolve()}")

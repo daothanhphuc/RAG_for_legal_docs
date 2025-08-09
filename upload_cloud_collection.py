@@ -99,7 +99,7 @@ def load_data(json_folder):
             docs["chunk_text"].append(chunk_text)
 
     total = len(docs["chunk_text"])
-    print(f"[INFO] Tải xong {total} đoạn, chuẩn bị tạo embedding vectors")
+    print(f"Tải xong {total} đoạn, chuẩn bị tạo embedding vectors")
     return docs
 
 def fix_str_list(lst):
@@ -112,13 +112,13 @@ def insert_to_milvus_from_loaded(metadata_dict, batch_size=64):
     def fix_str(x):
         return str(x) if x is not None else ""
 
-    print(f"[INFO] Đang upload {total} vectors lên Milvus theo batch size={batch_size}...")
+    print(f"Đang upload {total} vectors lên Milvus theo batch size={batch_size}...")
 
     for start in tqdm(range(0, total, batch_size), desc="Inserting"):
         end = min(start + batch_size, total)
         batch_texts = metadata_dict["chunk_text"][start:end]
 
-        # Tạo embedding (chuẩn hóa nếu cần)
+        # normalize if using cosine similarity
         batch_embeddings = embedding_model.encode(
             batch_texts,
             convert_to_numpy=False  # trả về list of python lists
@@ -181,22 +181,21 @@ def build_index():
     return collection  
 
 def search(query: str, collection: Collection, top_k: int = 5):
-    # Tạo embedding cho query
     query_emb = embedding_model.encode(query, convert_to_numpy=False)
-    # Chuẩn hóa nếu bạn đã normalize khi insert
+
     def normalize(vec):
         arr = np.array(vec, dtype=float)
         norm = np.linalg.norm(arr)
         return (arr / norm).tolist() if norm != 0 else arr.tolist()
     query_emb = normalize(query_emb)
 
-    # Thực hiện truy vấn
+    # Need more advanced search experiment here
     results = collection.search(
         data=[query_emb],
         anns_field="embedding",
-        param={"metric_type": "COSINE", "params": {"ef": 50}},  # tùy chỉnh nếu cần
+        param={"metric_type": "COSINE", "params": {"ef": 50}},  
         limit=top_k,
-        expr=None,  # có thể thêm filter expr như "document_id == 123"
+        expr=None,  # filter expr like "document_id == 123"
         output_fields=[
             "document_id",
             "chunk_index",
@@ -207,7 +206,7 @@ def search(query: str, collection: Collection, top_k: int = 5):
         ],
     )
 
-    # Kết quả trả về: list of SearchResults cho mỗi query (ở đây chỉ 1)
+    # output: list of SearchResults cho mỗi query - only 1 here
     hits = results[0]
     formatted = []
     for hit in hits:
@@ -236,7 +235,7 @@ if __name__ == "__main__":
     # query_text = "Nghị định vào năm 1993"
     # results = search(query_text, collection, top_k=5)
     # for i, r in enumerate(results, 1):
-    #     print(f"--- Result {i} (score={r['score']:.4f}) ---")
+    #     print(f"  Result {i} (score={r['score']:.4f}) ")
     #     print(f"so_ky_hieu: {r['so_ky_hieu']}")
     #     print(f"trich_yeu: {r['trich_yeu']}")
     #     print(f"chunk_text: {r['chunk_text'][:300]}...")

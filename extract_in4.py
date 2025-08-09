@@ -98,7 +98,7 @@ def process_standard_files():
     for file_path in files:
         stem = file_path.stem
         if stem not in error_md_names:
-            continue  # Bỏ qua nếu không nằm trong danh sách lỗi
+            continue  
 
         print(f"📑 Standardizing: {file_path.name}")
         try:
@@ -115,39 +115,39 @@ def process_standard_files():
             with open(output_file, "w", encoding="utf-8") as f:
                 f.write(md_text)
 
-            print(f"✅ Markdown saved: {output_file.name}")
+            print(f"Markdown saved: {output_file.name}")
         except Exception as e:
-            print(f"❌ Error processing {file_path.name}: {e}")
+            print(f"Error processing {file_path.name}: {e}")
             
 def process_all_files():
     os.makedirs(OUTPUT_FOLDER, exist_ok=True)
     files = list(Path(INPUT_FOLDER).rglob("*.*"))
 
     for file_path in files:
-        print(f"🔍 Processing: {file_path.name}")
+        print(f"Processing: {file_path.name}")
         raw_text = extract_text_from_file(file_path)
         if not raw_text.strip():
-            print(f"⚠️ Empty or unreadable file: {file_path.name}")
+            print(f"Empty or unreadable file: {file_path.name}")
             continue
         fixed_text = correct_vietnamese_text(raw_text)
 
         output_file = Path(OUTPUT_FOLDER) / (file_path.stem + ".txt")
         with open(output_file, "w", encoding="utf-8") as f:
             f.write(fixed_text)
-        print(f"✅ Done: {output_file.name}")
+        print(f"Done: {output_file.name}")
 
 # def process_standard_files():
 #     os.makedirs(STANDARD_FOLDER, exist_ok=True)
 #     files = list(Path(OUTPUT_FOLDER).rglob("*.txt"))
 
 #     for file_path in files:
-#         print(f"📑 Standardizing: {file_path.name}")
+#         print(f"Standardizing: {file_path.name}")
 #         try:
 #             with open(file_path, "r", encoding="utf-8") as f:
 #                 text = f.read()
 
 #             if not text.strip():
-#                 print(f"⚠️ Empty file skipped: {file_path.name}")
+#                 print(f"Empty file skipped: {file_path.name}")
 #                 continue
 
 #             md_text = standard_text(text)
@@ -156,9 +156,9 @@ def process_all_files():
 #             with open(output_file, "w", encoding="utf-8") as f:
 #                 f.write(md_text)
 
-#             print(f"✅ Markdown saved: {output_file.name}")
+#             print(f"Markdown saved: {output_file.name}")
 #         except Exception as e:
-#             print(f"❌ Error processing {file_path.name}: {e}")
+#             print(f"Error processing {file_path.name}: {e}")
 
 if __name__ == "__main__":
     # process_all_files()
