@@ -13,10 +13,10 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
-if "last_user_query" not in st.session_state:
-    st.session_state.last_user_query = None
-st.session_state.setdefault("chat_history", [])
-st.session_state.setdefault("retrieved_chunks", [])
+if "selected_chat_index" not in st.session_state:
+    st.session_state.selected_chat_index = None
+# st.session_state.setdefault("chat_history", [])
+# st.session_state.setdefault("retrieved_chunks", [])
 
 with st.sidebar:
     st.markdown("### Lịch sử hội thoại")
