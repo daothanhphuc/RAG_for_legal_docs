@@ -54,10 +54,17 @@ if query:
 
     # Build prompt and call LLM
     prompt = build_prompt(query, reranked)
-    with st.spinner("Generating answer from OpenAI..."):
-        answer = ask_llm(prompt)
+    messages = [
+        {"role": "system", "content": "Bạn là một người trợ lý chuyên tìm kiếm và trả lời về thông tin văn bản hành chính."},
+    ]
+    # Thêm lịch sử hội thoại trước (đã có user+assistant)
+    for msg in st.session_state.chat_history:
+        messages.append({"role": msg["role"], "content": msg["content"]})
 
-    # Display answer
+    messages.append({"role": "user", "content": prompt})
+    with st.spinner("Generating answer from OpenAI..."):
+        answer = ask_llm(messages)
+
     st.subheader("Answer")
     if answer:
         st.session_state.chat_history.append({"role": "assistant", "content": answer})
