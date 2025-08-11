@@ -22,6 +22,20 @@ with st.sidebar:
         st.session_state.chat_history = []
         st.session_state.retrieved_chunks = []
         st.success("Cleared.")
+        
+    st.markdown("### Chọn đoạn chat để hỏi lại")
+    if "chat_history" in st.session_state and st.session_state.chat_history:
+        for i, msg in enumerate(st.session_state.chat_history):
+            role = msg["role"]
+            content = msg["content"]
+            # Hiển thị tóm tắt đoạn chat (cắt ngắn nếu dài)
+            display_text = content if len(content) < 80 else content[:77] + "..."
+            if st.button(f"{role.capitalize()} #{i+1}: {display_text}", key=f"select_{i}"):
+                st.session_state.selected_text = content
+                st.success(f"Đã chọn đoạn {role} #{i+1} để hỏi lại.")
+    else:
+        st.info("Chưa có đoạn chat nào để chọn.")
+    
 
 # Display history
 for msg in st.session_state.chat_history:
@@ -29,7 +43,7 @@ for msg in st.session_state.chat_history:
         st.markdown(msg["content"])
 
 # Input box
-query = st.chat_input("Ask a legal question:")
+query = st.chat_input("Nhập câu hỏi ở đây:")
 
 if query:
     st.session_state.chat_history.append({"role": "user", "content": query})
