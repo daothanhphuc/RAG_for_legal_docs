@@ -153,9 +153,11 @@ def build_prompt(question: str, chunks: List[RetrievedChunk]) -> str:
         meta = c.metadata
         part = (
             f"[{i}] score_initial: {c.score_initial:.4f}, rerank_score: {c.score_rerank:.4f}\n"
-            f"so_ky_hieu: {meta.get('so_ky_hieu','')}; trich_yeu: {meta.get('trich_yeu','')}; "
-            f"file: {meta.get('file_link_local','')}; chunk_index: {meta.get('chunk_index')}\n"
-            # f"Text: {c.chunk_text.strip()[:100]}\n"
+            f"so_ky_hieu: {meta.get('so_ky_hieu','')}\n"
+            f"trich_yeu: {meta.get('trich_yeu','')}\n"
+            f"file: {meta.get('file_link_local','')}\n"
+            f"chunk_index: {meta.get('chunk_index')}\n"
+            f"Text: {c.chunk_text.strip()}\n"
         )
         parts.append(part)
     context = "\n---\n".join(parts)
