@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import re
 from sentence_transformers import SentenceTransformer
 from sentence_transformers import CrossEncoder
 from pymilvus import connections, Collection
@@ -71,6 +72,69 @@ def initial_retrieval(query: str, k: int = INITIAL_K) -> List[RetrievedChunk]:
         ))
     return chunks
 
+# Build hybrid search
+def parse_vn_query(user_query: str) -> tuple[str, dict]:
+    filters = {}
+    match_year = re.search(r"(năm|ban hành năm)\s*(\d{4})", user_query, re.IGNORECASE)
+    if match_year:
+        filters["nam_ban_hanh"] = int(match_year.group(2))
+
+    # add regex for số ký hiệu
+    match_so_ky_hieu = re.search(r"(\d+/\d{4}/[A-ZĐ]+-[A-Z]+)", user_query)
+    if match_so_ky_hieu:
+        filters["so_ky_hieu"] = match_so_ky_hieu.group(1)
+
+    semantic_text = user_query
+    for val in filters.values():
+        semantic_text = re.sub(str(val), "", semantic_text, flags=re.IGNORECASE)
+    return semantic_text.strip(), filters
+
+#Get all expressions 
+def build_expr(filters: dict) -> str:
+    expr_parts = []
+    for key, value in filters.items():
+        if isinstance(value, str):
+            expr_parts.append(f'{key} == "{value}"')
+        elif isinstance(value, (int, float)):
+            expr_parts.append(f"{key} == {value}")
+    return " and ".join(expr_parts) if expr_parts else ""
+
+def hybrid_search(user_query: str, top_k=20):
+    semantic_text, filters = parse_vn_query(user_query)
+    query_vector = embedder.encode(semantic_text)
+    expr = build_expr(filters)
+
+    results = collection.search(
+        data=[query_vector],
+        anns_field="embedding",
+        param={"metric_type": "IP", "params": {"nprobe": 10}},
+        limit=top_k,
+        expr=expr if expr else None,
+        output_fields=[
+            "document_id",
+            "chunk_index",
+            "so_ky_hieu",
+            "trich_yeu",
+            "file_link_local",
+            "chunk_text",
+        ]
+    )
+
+    candidates = []
+    for hits in results:
+        for hit in hits:
+            candidates.append({
+                "document_id": hit.entity.get("document_id"),
+                "chunk_index": hit.entity.get("chunk_index"),
+                "so_ky_hieu": hit.entity.get("so_ky_hieu"),
+                "trich_yeu": hit.entity.get("trich_yeu"),
+                "file_link_local": hit.entity.get("file_link_local"),
+                "chunk_text": hit.entity.get("chunk_text"),
+                "score": hit.distance
+            })
+    return candidates
+
+
 def rerank(query: str, candidates: List[RetrievedChunk], top_k: int = RERANK_TOP_K) -> List[RetrievedChunk]:
     if not candidates:
         return []
@@ -79,7 +143,7 @@ def rerank(query: str, candidates: List[RetrievedChunk], top_k: int = RERANK_TOP
     rerank_scores = cross_encoder.predict(pairs)  # higher is better
     for c, s in zip(candidates, rerank_scores):
         c.score_rerank = float(s)
-    # sort by rerank then maybe fallback to initial if tie
+
     sorted_chunks = sorted(candidates, key=lambda x: x.score_rerank, reverse=True)
     return sorted_chunks[:top_k]
 
@@ -96,14 +160,14 @@ def build_prompt(question: str, chunks: List[RetrievedChunk]) -> str:
         parts.append(part)
     context = "\n---\n".join(parts)
     prompt = f"""
-Bạn là một trợ lý pháp lý. Sử dụng các đoạn văn bản đã truy xuất (cùng với điểm số và siêu dữ liệu của chúng) để trả lời câu hỏi của người dùng. 
+Bạn là một trợ lý pháp lý. Sử dụng top-K đoạn văn bản đã truy xuất (cùng với điểm số và siêu dữ liệu của chúng) để trả lời câu hỏi của người dùng. 
 Trích dẫn nguồn đầy đủ nội dung từ đoạn văn bản được cung cấp.
 Context:
 {context}
 
 Question: {question}
 
-Trả lời của bạn nên ngắn gọn và trực tiếp, chỉ sử dụng thông tin từ các đoạn văn bản đã cung cấp.
+Câu trả lời của bạn không có thêm bình luận, chỉ sử dụng thông tin từ các đoạn văn bản đã cung cấp.
 """
     return prompt
 #Trả lời : "Tôi không biết dựa trên các tài liệu đã cung cấp." nếu không có thông tin nào liên quan.
