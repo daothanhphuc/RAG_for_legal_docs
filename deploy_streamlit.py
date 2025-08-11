@@ -52,8 +52,9 @@ if query:
         {"role": "system", "content": "Bạn là một người trợ lý chuyên tìm kiếm và trả lời về thông tin văn bản hành chính."},
     ]
     # Thêm lịch sử hội thoại trước (đã có user+assistant)
-    for msg in st.session_state.chat_history:
-        messages.append({"role": msg["role"], "content": msg["content"]})
+    for chat in st.session_state.chat_history:
+        messages.append({"role": "user", "content": chat["question"]})
+        messages.append({"role": "assistant", "content": chat["answer"]})
 
     messages.append({"role": "user", "content": prompt})
     with st.spinner("Generating answer from OpenAI..."):
