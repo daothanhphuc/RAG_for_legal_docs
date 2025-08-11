@@ -36,6 +36,17 @@ def normalize(vec: np.ndarray) -> List[float]:
     norm = np.linalg.norm(vec)
     return (vec / norm).tolist() if norm != 0 else vec.tolist()
 
+def build_expr_test(filters: dict, extra_keyword: str = None) -> str:
+    expr_parts = []
+    for key, value in filters.items():
+        if isinstance(value, str):
+            expr_parts.append(f'{key} == "{value}"')
+        elif isinstance(value, (int, float)):
+            expr_parts.append(f"{key} == {value}")
+    if extra_keyword:
+        expr_parts.append(f'trich_yeu like "%{extra_keyword}%"')
+    return " and ".join(expr_parts) if expr_parts else ""
+
 def initial_retrieval(query: str, k: int = INITIAL_K) -> List[RetrievedChunk]:
     q_vec = embedder.encode(query)
     q_vec = normalize(q_vec)
@@ -44,6 +55,7 @@ def initial_retrieval(query: str, k: int = INITIAL_K) -> List[RetrievedChunk]:
         anns_field="embedding",
         param={"metric_type": "COSINE", "params": {"ef": 50}},
         limit=k,
+        expr= build_expr_test({}, extra_keyword="Ban Công tác người Hoa"),
         output_fields=[
             "document_id",
             "chunk_index",
@@ -162,17 +174,18 @@ def build_prompt(question: str, chunks: List[RetrievedChunk]) -> str:
         parts.append(part)
     context = "\n---\n".join(parts)
     prompt = f"""
-Bạn là một trợ lý pháp lý. Sử dụng top-K đoạn văn bản đã truy xuất (cùng với điểm số và siêu dữ liệu của chúng) để trả lời câu hỏi của người dùng. 
-Trích dẫn nguồn đầy đủ nội dung từ đoạn văn bản được cung cấp.
+Bạn là một trợ lý pháp lý. Sử dụng top-K đoạn văn bản đã truy xuất (bao gồm điểm số, siêu dữ liệu, và nội dung của chúng) để trả lời câu hỏi của người dùng.
+Trích dẫn nguyên văn nội dung từ các đoạn văn bản được cung cấp, kèm theo số thứ tự đoạn.
+Không thêm bình luận hoặc suy luận ngoài thông tin đã cho.
 Context:
 {context}
 
 Question: {question}
 
-Câu trả lời của bạn không có thêm bình luận, chỉ sử dụng thông tin từ các đoạn văn bản đã cung cấp.
+Câu trả lời của bạn:
 """
     return prompt
-#Trả lời : "Tôi không biết dựa trên các tài liệu đã cung cấp." nếu không có thông tin nào liên quan.
+
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 def ask_llm(prompt: str) -> str:
