@@ -29,6 +29,16 @@ with st.sidebar:
         st.session_state.selected_chat_index = None
         st.success("Cleared.")
 
+# Nếu đã chọn câu trả lời, hiển thị toàn bộ hội thoại tới thời điểm đó
+if st.session_state.selected_chat_index is not None:
+    st.markdown("### 📜 Hội thoại đã chọn")
+    for i in range(st.session_state.selected_chat_index + 1):
+        chat = st.session_state.chat_history[i]
+        with st.chat_message("user"):
+            st.markdown(chat["question"])
+        with st.chat_message("assistant"):
+            st.markdown(chat["answer"])
+
 # Input box
 query = st.chat_input("Nhập câu hỏi:")
 
