@@ -232,6 +232,6 @@ def ask_llm(messages: list) -> str:
         #     {"role": "system", "content": "Bạn là một người trợ lý chuyên tìm kiếm và trả lời về thông tin văn bản hành chính."},
         #     {"role": "user", "content": prompt}
         # ],
-        max_tokens=800
+        max_tokens=10000
     )
     return response.choices[0].message.content.strip()
