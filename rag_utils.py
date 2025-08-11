@@ -22,6 +22,7 @@ collection.load()
 embedder = SentenceTransformer("all-MiniLM-L6-v2")
 cross_encoder = CrossEncoder('cross-encoder/ms-marco-MiniLM-L-6-v2')  # pretrained reranker
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 INITIAL_K = 10
 RERANK_TOP_K = 5
@@ -47,16 +48,43 @@ def build_expr_test(filters: dict, extra_keyword: str = None) -> str:
         expr_parts.append(f'trich_yeu like "%{extra_keyword}%"')
     return " and ".join(expr_parts) if expr_parts else ""
 
+def extract_extra_keyword_with_gpt(query: str) -> str | None:
+    prompt = f"""
+Bạn là một trợ lý trích xuất thực thể chính trong câu hỏi pháp lý tiếng Việt.
+Hãy chỉ trả về tên tổ chức, chủ thể hoặc cụm từ quan trọng nhất liên quan đến câu hỏi sau đây,
+dùng để lọc văn bản trong bộ dữ liệu pháp luật:
+
+Câu hỏi: {query}
+
+Tên tổ chức hoặc từ khóa chính:
+"""
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[
+            {"role": "system", "content": "Bạn là một trợ lý trích xuất thực thể chính xác."},
+            {"role": "user", "content": prompt}
+        ],
+        temperature=0,
+        max_tokens=20,
+        n=1,
+        stop=None
+    )
+    keyword = response.choices[0].message.content.strip()
+    return keyword
+
 def initial_retrieval(query: str, k: int = INITIAL_K) -> List[RetrievedChunk]:
     q_vec = embedder.encode(query)
     q_vec = normalize(q_vec)
     semantic_text, filters = parse_vn_query(query)
+    extra_keyword = extract_extra_keyword_with_gpt(query)
+
     results = collection.search(
         data=[q_vec],
         anns_field="embedding",
         param={"metric_type": "COSINE", "params": {"ef": 50}},
         limit=k,
-        expr= build_expr(filters),
+        expr= build_expr_test(filters, extra_keyword),
         output_fields=[
             "document_id",
             "chunk_index",
@@ -188,7 +216,6 @@ Câu trả lời của bạn:
     return prompt
 
 
-client = OpenAI(api_key=OPENAI_API_KEY)
 def ask_llm(prompt: str) -> str:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
