@@ -49,7 +49,6 @@ def generate_hypothetical_doc(user_question: str) -> str:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.3,
         max_tokens=150,
     )
     return response.choices[0].message.content.strip()
@@ -225,13 +224,14 @@ Câu trả lời của bạn:
     return prompt
 
 
-def ask_llm(prompt: str) -> str:
+def ask_llm(messages: list) -> str:
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": "Bạn là một người trợ lý chuyên tìm kiếm và trả lời về thông tin văn bản hành chính."},
-            {"role": "user", "content": prompt}
-        ],
+        messages= messages,
+        # messages=[
+        #     {"role": "system", "content": "Bạn là một người trợ lý chuyên tìm kiếm và trả lời về thông tin văn bản hành chính."},
+        #     {"role": "user", "content": prompt}
+        # ],
         max_tokens=800
     )
     return response.choices[0].message.content.strip()
