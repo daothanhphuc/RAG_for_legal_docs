@@ -50,12 +50,13 @@ def build_expr_test(filters: dict, extra_keyword: str = None) -> str:
 def initial_retrieval(query: str, k: int = INITIAL_K) -> List[RetrievedChunk]:
     q_vec = embedder.encode(query)
     q_vec = normalize(q_vec)
+    semantic_text, filters = parse_vn_query(query)
     results = collection.search(
         data=[q_vec],
         anns_field="embedding",
         param={"metric_type": "COSINE", "params": {"ef": 50}},
         limit=k,
-        expr= build_expr_test({}, extra_keyword="Ban Công tác người Hoa"),
+        expr= build_expr(filters),
         output_fields=[
             "document_id",
             "chunk_index",
