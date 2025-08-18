@@ -130,7 +130,7 @@ def initial_retrieval(query: str, k: int = INITIAL_K) -> List[RetrievedChunk]:
         ))
     return chunks
 
-# Build hybrid search
+# # Build hybrid search
 def parse_vn_query(user_query: str) -> tuple[str, dict]:
     filters = {}
     match_year = re.search(r"(năm|ban hành năm)\s*(\d{4})", user_query, re.IGNORECASE)
@@ -147,41 +147,40 @@ def parse_vn_query(user_query: str) -> tuple[str, dict]:
         semantic_text = re.sub(str(val), "", semantic_text, flags=re.IGNORECASE)
     return semantic_text.strip(), filters
 
-def hybrid_search(user_query: str, top_k=20):
-    semantic_text, filters = parse_vn_query(user_query)
-    query_vector = embedder.encode(semantic_text)
-    expr = build_expr_test(filters)
+# def hybrid_search(user_query: str, top_k=20):
+#     semantic_text, filters = parse_vn_query(user_query)
+#     query_vector = embedder.encode(semantic_text)
+#     expr = build_expr_test(filters)
 
-    results = collection.search(
-        data=[query_vector],
-        anns_field="embedding",
-        param={"metric_type": "IP", "params": {"nprobe": 10}},
-        limit=top_k,
-        expr=expr if expr else None,
-        output_fields=[
-            "document_id",
-            "chunk_index",
-            "so_ky_hieu",
-            "trich_yeu",
-            "file_link_local",
-            "chunk_text",
-        ]
-    )
+#     results = collection.search(
+#         data=[query_vector],
+#         anns_field="embedding",
+#         param={"metric_type": "IP", "params": {"nprobe": 10}},
+#         limit=top_k,
+#         expr=expr if expr else None,
+#         output_fields=[
+#             "document_id",
+#             "chunk_index",
+#             "so_ky_hieu",
+#             "trich_yeu",
+#             "file_link_local",
+#             "chunk_text",
+#         ]
+#     )
 
-    candidates = []
-    for hits in results:
-        for hit in hits:
-            candidates.append({
-                "document_id": hit.entity.get("document_id"),
-                "chunk_index": hit.entity.get("chunk_index"),
-                "so_ky_hieu": hit.entity.get("so_ky_hieu"),
-                "trich_yeu": hit.entity.get("trich_yeu"),
-                "file_link_local": hit.entity.get("file_link_local"),
-                "chunk_text": hit.entity.get("chunk_text"),
-                "score": hit.distance
-            })
-    return candidates
-
+#     candidates = []
+#     for hits in results:
+#         for hit in hits:
+#             candidates.append({
+#                 "document_id": hit.entity.get("document_id"),
+#                 "chunk_index": hit.entity.get("chunk_index"),
+#                 "so_ky_hieu": hit.entity.get("so_ky_hieu"),
+#                 "trich_yeu": hit.entity.get("trich_yeu"),
+#                 "file_link_local": hit.entity.get("file_link_local"),
+#                 "chunk_text": hit.entity.get("chunk_text"),
+#                 "score": hit.distance
+#             })
+#     return candidates
 
 def rerank(query: str, candidates: List[RetrievedChunk], top_k: int = RERANK_TOP_K) -> List[RetrievedChunk]:
     if not candidates:
