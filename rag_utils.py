@@ -212,6 +212,8 @@ def build_prompt(question: str, chunks: List[RetrievedChunk]) -> str:
     prompt = f"""
 Bạn là một trợ lý pháp lý. Sử dụng top-K đoạn văn bản đã truy xuất (bao gồm điểm số, siêu dữ liệu, và nội dung của chúng) để trả lời câu hỏi của người dùng.
 Trích dẫn nguyên văn nội dung từ các đoạn văn bản được cung cấp, kèm theo số thứ tự đoạn.
+Nếu câu hỏi chứa khái niệm mơ hồ (ví dụ: "văn bản"), bạn cần suy luận và ánh xạ nó tới các loại văn bản pháp luật phổ biến 
+(thông tư, nghị định, quyết định, công văn). Sau đó dựa vào tài liệu truy xuất để trả lời.
 Không thêm bình luận hoặc suy luận ngoài thông tin đã cho.
 Nếu không tìm được đoạn văn bản nào liên quan, hãy trả lời: "Tôi không biết dựa trên các tài liệu đã cung cấp."
 Context:
