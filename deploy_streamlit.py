@@ -68,7 +68,11 @@ if query:
 
     messages.append({"role": "user", "content": prompt})
     with st.spinner("Generating answer from OpenAI..."):
-        answer = ask_llm(messages)
+        try:
+            answer = ask_llm(messages)
+        except Exception as e:
+            st.warning("Đã xảy ra lỗi khi tạo câu trả lời.")
+            answer = "Xin lỗi, đã xảy ra lỗi khi tạo câu trả lời."
 
     st.subheader("Answer")
     st.session_state.chat_history.append({
